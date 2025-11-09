@@ -57,13 +57,13 @@ app.get("/api/sos", (req, res) => {
 
 // 🔹 Handle new SOS (POST)
 app.post("/api/sos", (req, res) => {
-  const { message, latitude, longitude, lat, lng } = req.body;
+  const { message, latitude, longitude, lat, lon } = req.body;
 
   const newSOS = {
     id: Date.now(),
     message: message || "No message provided",
     latitude: latitude ?? lat,
-    longitude: longitude ?? lng,
+    longitude: longitude ?? lon,
     time: new Date(),
   };
 
