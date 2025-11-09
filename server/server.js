@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 5010;
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://your-frontend-name.onrender.com"],
+    origin: ["http://localhost:5173", "https://resqnet-dashboard.onrender.com"],
     methods: ["GET", "POST", "DELETE"],
     credentials: true,
   })
