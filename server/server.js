@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 const app = express();
 const PORT = process.env.PORT || 5010;
 
+// ✅ Proper CORS setup for local + Render
 app.use(
   cors({
     origin: ["http://localhost:5173", "https://resqnet-dashboard.onrender.com"],
@@ -19,27 +20,28 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Serve built frontend (for Render)
+// ✅ Serve built React app (for Render)
 app.use(express.static(path.join(__dirname, "../frontend/react-map/dist")));
 
 let clients = [];
 let sosList = [];
 
-// 🔹 SSE Stream (live updates)
+// 🔹 SSE connection (live updates)
 app.get("/api/sos/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // Important for Render
   res.flushHeaders();
 
   const clientId = Date.now();
   clients.push(res);
   console.log(`✅ Client ${clientId} connected`);
 
-  // Heartbeat to prevent Render / browser timeout
+  // 🫀 Keepalive ping every 10s (prevents disconnect)
   const keepAlive = setInterval(() => {
-    res.write(":\n\n");
-  }, 15000);
+    res.write(": keep-alive\n\n");
+  }, 10000);
 
   req.on("close", () => {
     console.log(`❌ Client ${clientId} disconnected`);
@@ -48,35 +50,35 @@ app.get("/api/sos/stream", (req, res) => {
   });
 });
 
-// 🔹 Get all SOS entries
+// 🔹 Get all stored SOS entries
 app.get("/api/sos", (req, res) => {
   res.json(sosList);
 });
 
-// 🔹 Receive new SOS
+// 🔹 Handle new SOS (POST)
 app.post("/api/sos", (req, res) => {
-  const { message, latitude, longitude } = req.body;
+  const { message, latitude, longitude, lat, lng } = req.body;
 
   const newSOS = {
     id: Date.now(),
-    message,
-    latitude,
-    longitude,
+    message: message || "No message provided",
+    latitude: latitude ?? lat,
+    longitude: longitude ?? lng,
     time: new Date(),
   };
 
   sosList.push(newSOS);
   console.log("📩 Received SOS:", newSOS);
 
-  // Send to all connected clients
+  // Broadcast new SOS to all connected clients
   clients.forEach((client) => {
     client.write(`data: ${JSON.stringify(newSOS)}\n\n`);
   });
 
-  res.status(200).json({ success: true });
+  res.status(200).json({ success: true, newSOS });
 });
 
-// 🔹 Delete SOS (mark resolved)
+// 🔹 Delete SOS
 app.delete("/api/sos/:id", (req, res) => {
   const id = Number(req.params.id);
   sosList = sosList.filter((sos) => sos.id !== id);
@@ -84,11 +86,11 @@ app.delete("/api/sos/:id", (req, res) => {
   res.status(200).json({ success: true });
 });
 
-// Serve React app
+// ✅ Serve frontend for all other routes
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/react-map/dist/index.html"));
 });
 
-app.listen(process.env.PORT || 5010, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port ${process.env.PORT || 5010}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
