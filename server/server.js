@@ -89,6 +89,6 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/react-map/dist/index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+app.listen(process.env.PORT || 5010, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${process.env.PORT || 5010}`);
 });
